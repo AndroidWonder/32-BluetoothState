@@ -5,7 +5,9 @@
 
 package com.course.example.bluetoothstate;
 
+import android.Manifest;
 import android.app.Activity;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -16,103 +18,116 @@ import android.content.IntentFilter;
 import android.widget.Toast;
 
 public class BluetoothStateActivity extends Activity {
-	
+
 	String dStarted = BluetoothAdapter.ACTION_DISCOVERY_STARTED;
 	String dFinished = BluetoothAdapter.ACTION_DISCOVERY_FINISHED;
 	BluetoothAdapter bluetooth = null;
-	
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.main);
-        
-       //Enabling Bluetooth and tracking the adapter state
-        bluetooth = BluetoothAdapter.getDefaultAdapter();
 
-        BroadcastReceiver bluetoothState = new BroadcastReceiver() {
-          @Override
-          public void onReceive(Context context, Intent intent) {
-            String prevStateExtra = BluetoothAdapter.EXTRA_PREVIOUS_STATE;
-            String stateExtra = BluetoothAdapter.EXTRA_STATE;
-            int state = intent.getIntExtra(stateExtra, -1);
-            int previousState = intent.getIntExtra(prevStateExtra, -1);
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.main);
 
-            String tt = "";
-            switch (state) {
-              case (BluetoothAdapter.STATE_TURNING_ON) : {
-                tt = "Bluetooth turning on"; break;
-              }
-              case (BluetoothAdapter.STATE_ON) : {
-                tt = "Bluetooth on";
-                unregisterReceiver(this);  
-                break;
-              }
-              case (BluetoothAdapter.STATE_TURNING_OFF) : {
-                tt = "Bluetooth turning off"; break;
-              }
-              case (BluetoothAdapter.STATE_OFF) : {
-                tt = "Bluetooth off"; break;
-              }
-              default: break;
-            }
+		//Enabling Bluetooth and tracking the adapter state
+		bluetooth = BluetoothAdapter.getDefaultAdapter();
 
-            Toast.makeText(getApplicationContext(), tt, Toast.LENGTH_LONG).show();
-          }
-        };
+		BroadcastReceiver bluetoothState = new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				String prevStateExtra = BluetoothAdapter.EXTRA_PREVIOUS_STATE;
+				String stateExtra = BluetoothAdapter.EXTRA_STATE;
+				int state = intent.getIntExtra(stateExtra, -1);
+				int previousState = intent.getIntExtra(prevStateExtra, -1);
 
-        if (!bluetooth.isEnabled()) {
-          String actionStateChanged = BluetoothAdapter.ACTION_STATE_CHANGED;
-          String actionRequestEnable = BluetoothAdapter.ACTION_REQUEST_ENABLE;
-          registerReceiver(bluetoothState,
-                           new IntentFilter(actionStateChanged));
-          startActivityForResult(new Intent(actionRequestEnable), 0);
-        }
-        
-      //Monitoring discovery
+				String tt = "";
+				switch (state) {
+					case (BluetoothAdapter.STATE_TURNING_ON): {
+						tt = "Bluetooth turning on";
+						break;
+					}
+					case (BluetoothAdapter.STATE_ON): {
+						tt = "Bluetooth on";
+						unregisterReceiver(this);
+						break;
+					}
+					case (BluetoothAdapter.STATE_TURNING_OFF): {
+						tt = "Bluetooth turning off";
+						break;
+					}
+					case (BluetoothAdapter.STATE_OFF): {
+						tt = "Bluetooth off";
+						break;
+					}
+					default:
+						break;
+				}
+
+				Toast.makeText(getApplicationContext(), tt, Toast.LENGTH_LONG).show();
+			}
+		};
+
+		if (!bluetooth.isEnabled()) {
+			String actionStateChanged = BluetoothAdapter.ACTION_STATE_CHANGED;
+			String actionRequestEnable = BluetoothAdapter.ACTION_REQUEST_ENABLE;
+			registerReceiver(bluetoothState,
+					new IntentFilter(actionStateChanged));
+			startActivityForResult(new Intent(actionRequestEnable), 0);
+		}
+
+		//Monitoring discovery
 		BroadcastReceiver discoveryMonitor = new BroadcastReceiver() {
 
-			  @Override
-			  public void onReceive(Context context, Intent intent) {
-			    if (dStarted.equals(intent.getAction())) { 
-			      // Discovery has started.
-			      Toast.makeText(getApplicationContext(),
-			                     "Discovery Started...", Toast.LENGTH_SHORT).show();
-			    }
-			    else if (dFinished.equals(intent.getAction())) {
-			      // Discovery has completed.
-			      Toast.makeText(getApplicationContext(),
-			                     "Discovery Completed...", Toast.LENGTH_SHORT).show();
-			    }
-			  }      
-			};
-			
-			registerReceiver(discoveryMonitor, 
-			                 new IntentFilter(dStarted));
-			registerReceiver(discoveryMonitor, 
-			                 new IntentFilter(dFinished));
-			
-			
-			//Discovering remote Bluetooth Devices 
-			BroadcastReceiver discoveryResult = new BroadcastReceiver() {
-				  @Override
-				  public void onReceive(Context context, Intent intent) {
-				    String remoteDeviceName = 
-				      intent.getStringExtra(BluetoothDevice.EXTRA_NAME);
-				    BluetoothDevice remoteDevice;
-				    remoteDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				if (dStarted.equals(intent.getAction())) {
+					// Discovery has started.
+					Toast.makeText(getApplicationContext(),
+							"Discovery Started...", Toast.LENGTH_SHORT).show();
+				} else if (dFinished.equals(intent.getAction())) {
+					// Discovery has completed.
+					Toast.makeText(getApplicationContext(),
+							"Discovery Completed...", Toast.LENGTH_SHORT).show();
+				}
+			}
+		};
 
-				    Toast.makeText(getApplicationContext(),
-				                   "Discovered: " + remoteDeviceName, 
-				                   Toast.LENGTH_SHORT).show();
+		registerReceiver(discoveryMonitor,
+				new IntentFilter(dStarted));
+		registerReceiver(discoveryMonitor,
+				new IntentFilter(dFinished));
 
-				    // TODO Do something with the remote Bluetooth Device.
-				  }
-				};
-				registerReceiver(discoveryResult, 
-				                 new IntentFilter(BluetoothDevice.ACTION_FOUND));
 
-				if (!bluetooth.isDiscovering())
-				  bluetooth.startDiscovery();
+		//Discovering remote Bluetooth Devices
+		BroadcastReceiver discoveryResult = new BroadcastReceiver() {
+			@Override
+			public void onReceive(Context context, Intent intent) {
+				String remoteDeviceName =
+						intent.getStringExtra(BluetoothDevice.EXTRA_NAME);
+				BluetoothDevice remoteDevice;
+				remoteDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+
+				Toast.makeText(getApplicationContext(),
+						"Discovered: " + remoteDeviceName,
+						Toast.LENGTH_SHORT).show();
+
+				// TODO Do something with the remote Bluetooth Device.
+			}
+		};
+		registerReceiver(discoveryResult,
+				new IntentFilter(BluetoothDevice.ACTION_FOUND));
+
+		if (checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+			// TODO: Consider calling
+			//    Activity#requestPermissions
+			// here to request the missing permissions, and then overriding
+			//   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+			//                                          int[] grantResults)
+			// to handle the case where the user grants the permission. See the documentation
+			// for Activity#requestPermissions for more details.
+			return;
+		}
+		if (!bluetooth.isDiscovering())
+			bluetooth.startDiscovery();
 				
     }//onCreate
     
